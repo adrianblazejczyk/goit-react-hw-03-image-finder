@@ -1,7 +1,6 @@
 import css from './APP.module.css';
 import React, { Component } from 'react';
 import Notiflix from 'notiflix';
-import PropTypes from 'prop-types';
 import { SearchBar, Loader, ImageGallery, Button, Modal } from '../components';
 
 import { searchImage } from '../services';
@@ -16,6 +15,15 @@ export class App extends Component {
     isOpenModal: false,
     selectedImageId: 0,
   };
+
+  async componentDidUpdate(prevProps, prevState) {
+    if (
+      this.state.searchKey !== prevState.searchKey ||
+      this.state.activePage !== prevState.activePage
+    ) {
+      await this.fetchImages(this.state.searchKey, this.state.activePage);
+    }
+  }
 
   fetchImages = (name, page) => {
     this.setState({ isLoading: true });
@@ -32,7 +40,7 @@ export class App extends Component {
               total: response.totalHits,
               hits: [...prevState.data.hits, ...response.hits],
             },
-            totalPages: Math.ceil(response.totalHits / 12),
+            totalPages: Math.floor(response.totalHits / 12),
           }));
         } else {
           Notiflix.Notify.success(`We found ${response.totalHits} images.`);
@@ -41,7 +49,7 @@ export class App extends Component {
               total: response.totalHits,
               hits: [...response.hits],
             },
-            totalPages: Math.ceil(response.totalHits / 12),
+            totalPages: Math.floor(response.totalHits / 12),
           }));
         }
         if (page === this.state.totalPages) {
@@ -56,13 +64,11 @@ export class App extends Component {
       .finally(() => {
         this.setState(prevState => ({
           isLoading: false,
-          activePage: prevState.activePage + 1,
         }));
       });
   };
 
   handlerSearch = data => {
-    this.fetchImages(data.searchKey, 1);
     this.setState(prevState => ({
       searchKey: data.searchKey,
       activePage: 1,
@@ -70,7 +76,9 @@ export class App extends Component {
   };
 
   handlerLoadMoreImage = () => {
-    this.fetchImages(this.state.searchKey, this.state.activePage);
+    this.setState(prevState => ({
+      activePage: prevState.activePage + 1,
+    }));
   };
 
   handlerOpenModal = eve => {
@@ -126,24 +134,3 @@ export class App extends Component {
     );
   }
 }
-
-App.propTypes = {
-  data: PropTypes.shape({
-    total: PropTypes.number.isRequired,
-    hits: PropTypes.arrayOf(
-      PropTypes.shape({
-        id: PropTypes.number.isRequired,
-      })
-    ).isRequired,
-  }).isRequired,
-  searchKey: PropTypes.string.isRequired,
-  totalPages: PropTypes.number.isRequired,
-  activePage: PropTypes.number.isRequired,
-  isLoading: PropTypes.bool.isRequired,
-  isOpenModal: PropTypes.bool.isRequired,
-  selectedImageId: PropTypes.number.isRequired,
-  handlerSearch: PropTypes.func.isRequired,
-  handlerLoadMoreImage: PropTypes.func.isRequired,
-  handlerOpenModal: PropTypes.func.isRequired,
-  handlerCloseModal: PropTypes.func.isRequired,
-};
